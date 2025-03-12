@@ -24,10 +24,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className="flex justify-center items-center min-h-screen bg-gray-100">
+        {/* 부모 컨테이너: 모바일 크기 유지 */}
+        <div className="relative w-full max-w-[480px] min-h-screen bg-white shadow-lg flex flex-col mx-auto">
+          {children}
+        </div>
       </body>
     </html>
   );
