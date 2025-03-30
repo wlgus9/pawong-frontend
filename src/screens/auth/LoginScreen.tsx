@@ -31,15 +31,17 @@ const LoginScreen = () => {
 
     try {
       const success = await login(email, password);
+      console.log('로그인 결과:', success);
+      
       if (success) {
-        // 로그인 성공 시 토큰 갱신 시작
-        refreshTokenPeriodically();
-        // 인증 상태 확인
+        await refreshTokenPeriodically();
         await checkAuthStatus();
+        console.log('인증 상태 업데이트 완료');
       } else {
         Alert.alert('오류', '로그인에 실패했습니다.');
       }
     } catch (error) {
+      console.error('로그인 처리 중 오류:', error);
       Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
     }
   };

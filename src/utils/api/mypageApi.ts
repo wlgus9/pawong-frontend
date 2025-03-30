@@ -9,53 +9,62 @@ interface ApiResponse {
   data: any;
 }
 
-export const fetchUserInfo = async (): Promise<UserInfoResponse | undefined> => {
-  try {
-    const cachedData = await cache.get<UserInfoResponse>(CACHE_KEYS.USER_INFO);
-    if (cachedData) {
-      console.log('캐시된 사용자 정보:', cachedData);
-      return cachedData;
-    }
+export interface UpdateUserInfoRequest {
+  nickName?: string;
+  phone?: string;
+  comment?: string;
+}
 
-    console.log('사용자 정보 요청 시작');
-    const response = await fetchApi<ApiResponse>(ApiConfig.endpoints.mypage.userInfo, {
+interface UpdateUserInfoResponse {
+  code: number;
+  message: string;
+  data: UserInfo;
+}
+
+export const fetchUserInfo = async () => {
+  try {
+    console.log('fetchUserInfo 요청 URL:', ApiConfig.endpoints.mypage.userInfo);
+    const response = await fetchApi<UserInfoResponse>(ApiConfig.endpoints.mypage.userInfo, {
       method: 'GET',
     });
-    console.log('사용자 정보 응답:', response);
+
+    console.log('fetchUserInfo 응답:', response);
 
     if (response?.code === 200) {
-      const userInfoResponse: UserInfoResponse = {
-        code: response.code,
-        message: response.message,
-        data: response.data
-      };
-      await cache.set(CACHE_KEYS.USER_INFO, userInfoResponse);
-      return userInfoResponse;
+      return response;
     }
 
+    console.log('fetchUserInfo 실패:', response);
     return undefined;
   } catch (error) {
-    console.error('사용자 정보 조회 실패:', error);
+    console.error('fetchUserInfo 에러:', error);
     return undefined;
   }
 };
 
-export const updateNickname = async (nickname: string): Promise<boolean> => {
+export const updateUserInfo = async (data: UpdateUserInfoRequest): Promise<UpdateUserInfoResponse | undefined> => {
   try {
-    const response = await fetchApi<ApiResponse>(ApiConfig.endpoints.mypage.updateNickname, {
-      method: 'PUT',
-      body: JSON.stringify({ nickname }),
+    console.log('updateUserInfo 요청 URL:', ApiConfig.endpoints.mypage.updateUserInfo);
+    console.log('updateUserInfo 요청 데이터:', data);
+    
+    const response = await fetchApi<UpdateUserInfoResponse>(ApiConfig.endpoints.mypage.updateUserInfo, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     });
 
+    console.log('updateUserInfo 응답:', response);
+
     if (response?.code === 200) {
+      // 사용자 정보가 업데이트되면 캐시 삭제
       await cache.remove(CACHE_KEYS.USER_INFO);
-      return true;
+      return response;
     }
 
-    return false;
+    console.log('updateUserInfo 실패:', response);
+    return undefined;
   } catch (error) {
-    console.error('닉네임 업데이트 실패:', error);
-    return false;
+    console.error('updateUserInfo 에러:', error);
+    return undefined;
   }
 };
 
@@ -67,7 +76,6 @@ export const deleteAccount = async (): Promise<boolean> => {
 
     return response?.code === 200;
   } catch (error) {
-    console.error('계정 삭제 실패:', error);
     return false;
   }
 }; 

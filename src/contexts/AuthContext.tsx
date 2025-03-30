@@ -40,17 +40,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 토큰 갱신 함수
     const performTokenRefresh = async () => {
-      const tokens = await auth.getTokens();
-      if (!tokens?.token) {
-        setIsAuthenticated(false);
-        return;
-      }
+      try {
+        const tokens = await auth.getTokens();
+        if (!tokens?.token) {
+          setIsAuthenticated(false);
+          return;
+        }
 
-      const response = await refreshToken();
-      if (response.success && response.data) {
-        await auth.saveTokens(response.data.data.accessToken);
-        setIsAuthenticated(true);
-      } else {
+        const response = await refreshToken();
+        console.log('토큰 갱신 응답:', response);
+
+        if (response?.code === 200 && response.data?.accessToken) {
+          await auth.saveTokens(response.data.accessToken);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('토큰 갱신 중 오류:', error);
         setIsAuthenticated(false);
       }
     };

@@ -8,9 +8,46 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import PetManageScreen from './screens/mypage/PetManageScreen';
-import { AuthProvider } from './contexts/AuthContext';
+import UserInfoEditScreen from './screens/mypage/UserInfoEditScreen';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const MainNavigator = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!isAuthenticated ? (
+        <Stack.Screen name="Auth" component={AuthNavigator} />
+      ) : (
+        <>
+          <Stack.Screen name="TabNavigator" component={TabNavigator} />
+          <Stack.Screen
+            name="PetManage"
+            component={PetManageScreen}
+            options={{
+              headerShown: true,
+              title: '반려동물 관리',
+            }}
+          />
+          <Stack.Screen
+            name="UserInfoEdit"
+            component={UserInfoEditScreen}
+            options={{
+              headerShown: true,
+              title: '회원정보 수정',
+            }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+};
 
 const App = () => {
   return (
@@ -18,11 +55,7 @@ const App = () => {
       <GestureHandlerRootView style={styles.container}>
         <NavigationContainer>
           <BottomSheetModalProvider>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Auth" component={AuthNavigator} />
-              <Stack.Screen name="TabNavigator" component={TabNavigator} />
-              <Stack.Screen name="PetManage" component={PetManageScreen} />
-            </Stack.Navigator>
+            <MainNavigator />
           </BottomSheetModalProvider>
         </NavigationContainer>
       </GestureHandlerRootView>

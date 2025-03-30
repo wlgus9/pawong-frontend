@@ -10,16 +10,20 @@ import {
   ScrollView,
   Modal,
   FlatList,
+  ActivityIndicator,
+  Pressable,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import KakaoIcon from '../../assets/images/kakao.svg';
 import NaverIcon from '../../assets/images/naver.svg';
 import GoogleIcon from '../../assets/images/google.svg';
 import { colors, spacing, typography, commonStyles } from '../../styles/theme';
-import { signup } from '../../utils/api/authApi';
+import { signup, checkEmail } from '../../utils/api/authApi';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { AuthStackParamList, UserType } from '../../types/navigation';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 type RegisterScreenRouteProp = RouteProp<AuthStackParamList, 'Register'>;
@@ -45,8 +49,11 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [showDomainModal, setShowDomainModal] = useState(false);
+  const [showDomainDropdown, setShowDomainDropdown] = useState(false);
   const [isDirectInput, setIsDirectInput] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailCheckMessage, setEmailCheckMessage] = useState('');
+  const [isEmailValid, setIsEmailValid] = useState(false);
 
   // 화면 포커스가 변경될 때 초기화
   useFocusEffect(
@@ -82,7 +89,7 @@ const RegisterScreen = () => {
       setIsDirectInput(false);
       setEmailDomain(domain);
     }
-    setShowDomainModal(false);
+    setShowDomainDropdown(false);
   };
 
   const getEmail = () => {
@@ -90,35 +97,72 @@ const RegisterScreen = () => {
     return `${emailId}@${domain}`;
   };
 
+  const handleEmailCheck = async () => {
+    if (!emailId) {
+      setEmailCheckMessage('이메일을 입력해주세요.');
+      setIsEmailValid(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await checkEmail(getEmail());
+      
+      if (response?.code === 200) {
+        setEmailCheckMessage(response.message);
+        setIsEmailValid(true);
+      } else if (response?.code === 400) {
+        setEmailCheckMessage(response.message);
+        setIsEmailValid(false);
+      } else {
+        setEmailCheckMessage('이메일 확인 중 오류가 발생했습니다.');
+        setIsEmailValid(false);
+      }
+    } catch (error) {
+      setEmailCheckMessage('이메일 확인 중 오류가 발생했습니다.');
+      setIsEmailValid(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
-    if (!userName || !emailId || !password || !confirmPassword || !phone) {
-      Alert.alert('오류', '모든 필드를 입력해주세요.');
+    if (!isEmailValid) {
+      Alert.alert('알림', '사용 가능한 이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!userName || !password || !confirmPassword || !phone) {
+      Alert.alert('알림', '모든 필드를 입력해주세요.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('오류', '비밀번호가 일치하지 않습니다.');
+      Alert.alert('알림', '비밀번호가 일치하지 않습니다.');
       return;
     }
 
-    const email = getEmail();
-    const response = await signup({
-      email,
-      password,
-      userName,
-      phone,
-      userType,
-    });
+    try {
+      setIsLoading(true);
+      const success = await signup({
+        email: getEmail(),
+        password,
+        userName,
+        phone,
+        userType,
+      });
 
-    if (response) {
-      Alert.alert('성공', '회원가입이 완료되었습니다.', [
-        {
-          text: '확인',
-          onPress: () => navigation.navigate('Login'),
-        },
-      ]);
-    } else {
+      if (success) {
+        Alert.alert('알림', '회원가입이 완료되었습니다.', [
+          { text: '확인', onPress: () => navigation.navigate('Login') }
+        ]);
+      } else {
+        Alert.alert('오류', '회원가입에 실패했습니다.');
+      }
+    } catch (error) {
       Alert.alert('오류', '회원가입 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -131,7 +175,11 @@ const RegisterScreen = () => {
 
   return (
     <SafeAreaView style={commonStyles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <KeyboardAwareScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+      >
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -155,32 +203,81 @@ const RegisterScreen = () => {
 
           <View style={styles.emailContainer}>
             <TextInput
-              style={[commonStyles.input, styles.emailInput]}
+              style={[styles.emailInput, { flex: 0.8, marginRight: spacing.sm }]}
               placeholder="이메일"
               value={emailId}
-              onChangeText={setEmailId}
+              onChangeText={(text) => {
+                setEmailId(text);
+                setEmailCheckMessage('');
+                setIsEmailValid(false);
+              }}
               autoCapitalize="none"
             />
             <Text style={styles.emailAt}>@</Text>
-            {isDirectInput ? (
-              <TextInput
-                style={[commonStyles.input, styles.emailInput]}
-                placeholder="도메인 입력"
-                value={customDomain}
-                onChangeText={setCustomDomain}
-                autoCapitalize="none"
-              />
-            ) : (
-              <TouchableOpacity
-                style={styles.domainButton}
-                onPress={() => setShowDomainModal(true)}
-              >
-                <Text style={styles.domainButtonText}>
-                  {emailDomain || '선택'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.domainContainer}>
+              {isDirectInput ? (
+                <TextInput
+                  style={[commonStyles.input, styles.emailInput]}
+                  placeholder="도메인 입력"
+                  value={customDomain}
+                  onChangeText={setCustomDomain}
+                  autoCapitalize="none"
+                />
+              ) : (
+                <View style={styles.domainSelectContainer}>
+                  <TouchableOpacity
+                    style={styles.domainSelectButton}
+                    onPress={() => setShowDomainDropdown(!showDomainDropdown)}
+                  >
+                    <Text style={styles.domainSelectText}>
+                      {emailDomain || '선택'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                  {showDomainDropdown && (
+                    <View style={styles.domainDropdown}>
+                      <ScrollView 
+                        nestedScrollEnabled={true}
+                        style={styles.domainScrollView}
+                        contentContainerStyle={styles.domainScrollContent}
+                      >
+                        {EMAIL_DOMAINS.map((domain, index) => (
+                          <TouchableOpacity
+                            key={domain}
+                            style={[
+                              styles.domainOption,
+                              index === EMAIL_DOMAINS.length - 1 && styles.lastDomainOption
+                            ]}
+                            onPress={() => handleDomainSelect(domain)}
+                          >
+                            <Text style={styles.domainOptionText}>{domain}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.checkButton, isLoading && styles.checkButtonDisabled]}
+              onPress={handleEmailCheck}
+              disabled={isLoading}
+            >
+              <Text style={styles.checkButtonText}>
+                {isLoading ? '확인 중...' : '중복확인'}
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {emailCheckMessage ? (
+            <Text style={[
+              styles.checkEmailMessage,
+              isEmailValid ? styles.checkEmailSuccess : styles.checkEmailError
+            ]}>
+              {emailCheckMessage}
+            </Text>
+          ) : null}
 
           <View style={styles.passwordContainer}>
             <TextInput
@@ -221,8 +318,16 @@ const RegisterScreen = () => {
             keyboardType="phone-pad"
           />
 
-          <TouchableOpacity style={commonStyles.button} onPress={handleRegister}>
-            <Text style={commonStyles.buttonText}>회원가입</Text>
+          <TouchableOpacity
+            style={[commonStyles.button, isLoading && commonStyles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={commonStyles.buttonText}>회원가입</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.socialLoginContainer}>
@@ -260,32 +365,7 @@ const RegisterScreen = () => {
             <Text style={styles.loginButtonText}>이미 계정이 있으신가요? 로그인</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-
-      <Modal
-        visible={showDomainModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDomainModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>이메일 도메인 선택</Text>
-            <FlatList
-              data={EMAIL_DOMAINS}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.domainItem}
-                  onPress={() => handleDomainSelect(item)}
-                >
-                  <Text style={styles.domainItemText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
@@ -312,30 +392,47 @@ const styles = StyleSheet.create({
   emailContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
   emailInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  emailAt: {
-    marginHorizontal: spacing.sm,
-    ...typography.body,
-  },
-  domainButton: {
-    flex: 1,
     backgroundColor: colors.background,
     padding: spacing.md,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    ...typography.body,
+    flex: 0.8,
   },
-  domainButtonText: {
+  emailAt: {
+    marginHorizontal: spacing.xs,
+    ...typography.body,
+  },
+  domainContainer: {
+    flex: 1.8,
+    position: 'relative',
+    marginRight: spacing.sm,
+  },
+  domainSelectContainer: {
+    position: 'relative',
+  },
+  domainSelectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 120,
+  },
+  domainSelectText: {
     ...typography.body,
     color: colors.text,
   },
   passwordContainer: {
-    marginBottom: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
   passwordMatchText: {
     ...typography.caption,
@@ -346,32 +443,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
     marginTop: spacing.xs,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: spacing.lg,
-    maxHeight: '50%',
-  },
-  modalTitle: {
-    ...typography.h2,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  domainItem: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  domainItemText: {
-    ...typography.body,
-    color: colors.text,
   },
   socialLoginContainer: {
     marginTop: spacing.xl,
@@ -417,6 +488,65 @@ const styles = StyleSheet.create({
     left: spacing.md,
     top: spacing.lg,
     padding: spacing.sm,
+  },
+  checkEmailMessage: {
+    ...typography.caption,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+  },
+  checkEmailSuccess: {
+    color: colors.success,
+  },
+  checkEmailError: {
+    color: colors.error,
+  },
+  checkButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  checkButtonDisabled: {
+    opacity: 0.5,
+  },
+  checkButtonText: {
+    ...typography.caption,
+    color: colors.white,
+  },
+  domainDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 4,
+    zIndex: 1000,
+    overflow: 'hidden',
+  },
+  domainScrollView: {
+    maxHeight: 200,
+  },
+  domainScrollContent: {
+    flexGrow: 1,
+  },
+  domainOption: {
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  domainOptionText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  lastDomainOption: {
+    borderBottomWidth: 0,
   },
 });
 

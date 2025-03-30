@@ -17,91 +17,55 @@ import auth from '../../utils/auth';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { fetchUserInfo, updateNickname, deleteAccount } from '../../utils/api/mypageApi';
+import { deleteAccount } from '../../utils/api/mypageApi';
 import { UserInfo } from '../../types/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUserInfo } from '../../contexts/UserInfoContext';
+import { logout } from '../../utils/api/authApi';
 
-type MyPageScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type ScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type MenuItemProps = {
+interface MenuItemProps {
   icon: string;
   title: string;
   onPress: () => void;
   color?: string;
-};
-
-// 더미 데이터
-const dummyUser = {
-  nickname: '행복한키움이',
-  email: 'hong@example.com',
-  phone: '010-1234-5678',
-  type: '키움이',
-  joinDate: '2024.03.15',
-  profileImage: 'https://via.placeholder.com/100',
-};
-
-const dummyPets = [
-  {
-    id: '1',
-    name: '몽이',
-    image: 'https://via.placeholder.com/150',
-  },
-  {
-    id: '2',
-    name: '까미',
-    image: 'https://via.placeholder.com/150',
-  },
-];
+}
 
 const MyPageScreen = () => {
-  const navigation = useNavigation<MyPageScreenNavigationProp>();
+  const navigation = useNavigation<ScreenNavigationProp>();
   const { stopTokenRefresh } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEditingNickname, setIsEditingNickname] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [nickname, setNickname] = useState('');
-  const [tempNickname, setTempNickname] = useState('');
+  const { userInfo, isLoading, loadUserInfo } = useUserInfo();
 
   useEffect(() => {
-    loadUserInfo();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserInfo();
+    });
 
-  const loadUserInfo = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetchUserInfo();
-      console.log('마이페이지 응답:', response);
-      if (response) {
-        setUserInfo(response);
-        setNickname(response.nickName || response.userName);
-        setTempNickname(response.nickName || response.userName);
-      } else {
-        Alert.alert('오류', '사용자 정보를 불러올 수 없습니다.');
-      }
-    } catch (error) {
-      console.error('사용자 정보 조회 중 오류:', error);
-      Alert.alert('오류', '사용자 정보를 불러올 수 없습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return unsubscribe;
+  }, [navigation, loadUserInfo]);
 
   const handleLogout = async () => {
     try {
-      await auth.removeTokens();
-      stopTokenRefresh();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Auth' }],
-      });
+      const success = await logout();
+      if (success) {
+        await auth.removeTokens();
+        stopTokenRefresh();
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Auth' }],
+        });
+      } else {
+        Alert.alert('오류', '로그아웃에 실패했습니다.');
+      }
     } catch (error) {
       console.error('로그아웃 중 오류:', error);
+      Alert.alert('오류', '로그아웃 중 오류가 발생했습니다.');
     }
   };
 
   const handleDeleteAccount = async () => {
     try {
-      setIsLoading(true);
       const success = await deleteAccount();
       if (success) {
         await auth.removeTokens();
@@ -111,38 +75,7 @@ const MyPageScreen = () => {
       }
     } catch (error) {
       Alert.alert('오류', '회원 탈퇴 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  const handleEditNickname = () => {
-    setIsEditingNickname(true);
-    setTempNickname(nickname);
-  };
-
-  const handleSaveNickname = async () => {
-    try {
-      setIsLoading(true);
-      const success = await updateNickname(tempNickname);
-      if (success) {
-        setNickname(tempNickname);
-        setIsEditingNickname(false);
-        Alert.alert('알림', '닉네임이 변경되었습니다.');
-        loadUserInfo();
-      } else {
-        Alert.alert('오류', '닉네임 변경에 실패했습니다.');
-      }
-    } catch (error) {
-      Alert.alert('오류', '닉네임 변경 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelNickname = () => {
-    setIsEditingNickname(false);
-    setTempNickname(nickname);
   };
 
   const MenuItem = ({ icon, title, onPress, color = colors.text }: MenuItemProps) => (
@@ -187,7 +120,7 @@ const MyPageScreen = () => {
       <ScrollView>
         <View style={styles.header}>
           <View style={styles.profileContainer}>
-            <TouchableOpacity style={styles.profileImageContainer}>
+            <View style={styles.profileImageContainer}>
               <Image
                 source={
                   userInfo.userType === 2 && userInfo.pets[0]?.photo
@@ -196,52 +129,23 @@ const MyPageScreen = () => {
                 }
                 style={styles.profileImage}
               />
-              {userInfo.userType === 2 && (
-                <View style={styles.editImageButton}>
-                  <Ionicons name="camera" size={16} color={colors.white} />
-                </View>
-              )}
-            </TouchableOpacity>
+            </View>
             <View style={styles.profileInfo}>
-              {isEditingNickname ? (
-                <View style={styles.nicknameEditContainer}>
-                  <TextInput
-                    style={styles.nicknameInput}
-                    value={tempNickname}
-                    onChangeText={setTempNickname}
-                    autoFocus
-                  />
-                  <View style={styles.nicknameEditButtons}>
-                    <TouchableOpacity
-                      style={[styles.nicknameButton, styles.saveButton]}
-                      onPress={handleSaveNickname}
-                      disabled={isLoading}
-                    >
-                      <Text style={styles.nicknameButtonText}>저장</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.nicknameButton, styles.cancelButton]}
-                      onPress={handleCancelNickname}
-                      disabled={isLoading}
-                    >
-                      <Text style={[styles.nicknameButtonText, styles.cancelButtonText]}>
-                        취소
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <TouchableOpacity onPress={handleEditNickname}>
-                  <View style={styles.nicknameContainer}>
-                    <Text style={styles.name}>{nickname}</Text>
-                    <Ionicons name="pencil" size={16} color={colors.textSecondary} />
-                  </View>
-                </TouchableOpacity>
-              )}
+              <View style={styles.nicknameContainer}>
+                <Text style={styles.name}>{userInfo.nickName || userInfo.userName}</Text>
+              </View>
               <Text style={styles.userType}>
                 {userInfo.userType === 2 ? '키움이' : '돌봄이'}
               </Text>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.introductionContainer}>
+          <View style={styles.introductionBox}>
+            <Text style={styles.introductionText}>
+              {userInfo.comment || '자기소개가 없습니다.'}
+            </Text>
           </View>
         </View>
 
@@ -276,7 +180,7 @@ const MyPageScreen = () => {
           <MenuItem
             icon="person-outline"
             title="회원정보 수정"
-            onPress={() => Alert.alert('알림', '준비 중인 기능입니다.')}
+            onPress={() => navigation.navigate('UserInfoEdit')}
           />
           <MenuItem
             icon="notifications-outline"
@@ -293,9 +197,6 @@ const MyPageScreen = () => {
             title="고객센터"
             onPress={() => Alert.alert('알림', '준비 중인 기능입니다.')}
           />
-        </View>
-
-        <View style={styles.section}>
           <MenuItem
             icon="log-out-outline"
             title="로그아웃"
@@ -338,17 +239,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     marginRight: spacing.md,
   },
-  editImageButton: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: 0,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   profileInfo: {
     flex: 1,
   },
@@ -356,43 +246,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  nicknameEditContainer: {
-    marginBottom: spacing.xs,
-  },
-  nicknameInput: {
-    ...typography.h2,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    padding: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  nicknameEditButtons: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  nicknameButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 4,
-    flex: 1,
-    alignItems: 'center',
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  cancelButton: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  nicknameButtonText: {
-    ...typography.caption,
-    color: colors.white,
-  },
-  cancelButtonText: {
-    color: colors.text,
   },
   name: {
     ...typography.h2,
@@ -408,6 +261,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: colors.border,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
   },
   sectionTitle: {
     ...typography.subtitle,
@@ -429,12 +288,6 @@ const styles = StyleSheet.create({
   menuText: {
     ...typography.body,
     marginLeft: spacing.sm,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
   },
   addButton: {
     padding: spacing.xs,
@@ -493,6 +346,32 @@ const styles = StyleSheet.create({
   retryButtonText: {
     ...typography.body,
     color: colors.white,
+  },
+  introductionContainer: {
+    marginHorizontal: 20,
+    marginVertical: 15,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  introductionBox: {
+    padding: 15,
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+  },
+  introductionText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
 

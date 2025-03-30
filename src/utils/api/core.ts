@@ -2,10 +2,9 @@ import ApiConfig from '../../config/api';
 import auth from '../auth';
 
 export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  code?: number;
+  code: number;
+  message: string;
+  data: T;
 }
 
 let isRefreshing = false;
@@ -33,7 +32,7 @@ export const refreshToken = async () => {
       return undefined;
     }
 
-    const response = await fetch(`${ApiConfig.baseURL}${ApiConfig.endpoints.auth.reissue}`, {
+    const response = await fetch(`${ApiConfig.baseUrl}${ApiConfig.endpoints.auth.reissue}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,56 +53,33 @@ export const refreshToken = async () => {
   }
 };
 
-export const fetchApi = async <T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T | undefined> => {
+export const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise<T | undefined> => {
   try {
-    // 로그인과 회원가입을 제외한 모든 요청에 인증 필요
-    const isAuthRequired = !endpoint.includes('/auth/login') && !endpoint.includes('/auth/signup');
     const tokens = await auth.getTokens();
-    
-    const headers: Record<string, string> = {
+    const isAuthRequired = !endpoint.includes('/login') && !endpoint.includes('/signup');
+
+    const headers = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
+      ...(isAuthRequired && tokens?.token ? { Authorization: `Bearer ${tokens.token}` } : {}),
+      ...(options.headers || {}),
     };
 
-    if (isAuthRequired) {
-      if (!tokens?.token) {
-        return undefined;
-      }
-      headers['Authorization'] = `Bearer ${tokens.token}`;
-    }
-
-    const response = await fetch(`${ApiConfig.baseURL}${endpoint}`, {
-      headers,
+    const response = await fetch(`${ApiConfig.baseUrl}${endpoint}`, {
       ...options,
+      headers,
     });
 
-    if (response.status === 401 && !isRefreshing && isAuthRequired) {
-      isRefreshing = true;
-      try {
-        const refreshResponse = await refreshToken();
-        if (refreshResponse?.data?.accessToken) {
-          await auth.saveTokens(refreshResponse.data.accessToken);
-          processQueue();
-          return fetchApi(endpoint, options);
-        } else {
-          processQueue(new Error('토큰 재발급 실패'));
-          return undefined;
-        }
-      } catch (error) {
-        processQueue(error);
-        return undefined;
-      } finally {
-        isRefreshing = false;
-      }
+    const data = await response.json();
+    console.log(`API 응답 (${endpoint}):`, data);
+
+    if (!response.ok) {
+      console.error(`API 에러 (${endpoint}):`, data.message || 'API 요청 실패');
+      return undefined;
     }
 
-    const data = await response.json();
-    return response.ok ? data : undefined;
+    return data;
   } catch (error) {
-    console.error('API 호출 중 오류:', error);
+    console.error(`API 에러 (${endpoint}):`, error instanceof Error ? error.message : '알 수 없는 에러');
     return undefined;
   }
 }; 

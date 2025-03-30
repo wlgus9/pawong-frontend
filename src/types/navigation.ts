@@ -10,6 +10,8 @@ export type RootStackParamList = {
   TabNavigator: undefined;
   MyPage: undefined;
   PetManage: undefined;
+  UserInfoEdit: undefined;
+  Authenticated: undefined;
 };
 
 export type AuthStackParamList = {
@@ -34,7 +36,8 @@ export type CareStackParamList = {
 };
 
 export type MyPageStackParamList = {
-  MyPageMain: undefined;
+  MyPage: undefined;
+  UserInfoEdit: undefined;
 };
 
 export type TabParamList = {

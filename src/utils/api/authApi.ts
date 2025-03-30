@@ -2,13 +2,14 @@ import { ApiConfig } from '../../config/api';
 import { UserType } from '../../types/navigation';
 import auth from '../auth';
 import { fetchApi } from './core';
+import { cache, CACHE_KEYS } from '../cache';
 
 interface SignupParams {
   email: string;
   password: string;
   userName: string;
   phone: string;
-  userType: UserType;
+  userType: string;
 }
 
 interface LoginResponse {
@@ -25,11 +26,24 @@ interface ApiResponse {
   data: any;
 }
 
+interface EmailCheckResponse {
+  code: number;
+  message: string;
+}
+
 export const login = async (email: string, password: string): Promise<boolean> => {
   try {
+    console.log('로그인 시도:', { email });
+    
     const response = await fetchApi<LoginResponse>(ApiConfig.endpoints.auth.login, {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
     });
 
     console.log('로그인 응답:', response);
@@ -63,5 +77,36 @@ export const signup = async (params: SignupParams): Promise<boolean> => {
   } catch (error) {
     console.error('회원가입 에러:', error);
     return false;
+  }
+};
+
+export const logout = async () => {
+  try {
+    const response = await fetchApi<ApiResponse>(ApiConfig.endpoints.auth.logout, {
+      method: 'POST',
+    });
+
+    if (response?.code === 200) {
+      // 로그아웃 시 사용자 정보 캐시 제거
+      await cache.remove(CACHE_KEYS.USER_INFO);
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('로그아웃 에러:', error);
+    return false;
+  }
+};
+
+export const checkEmail = async (email: string): Promise<EmailCheckResponse | undefined> => {
+  try {
+    const response = await fetchApi<EmailCheckResponse>(ApiConfig.endpoints.auth.checkEmail + `?email=${encodeURIComponent(email)}`, {
+      method: 'GET'
+    });
+    return response;
+  } catch (error) {
+    console.error('이메일 중복 확인 에러:', error);
+    return undefined;
   }
 }; 

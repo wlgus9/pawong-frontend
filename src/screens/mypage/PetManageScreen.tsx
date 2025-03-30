@@ -30,7 +30,7 @@ interface Pet {
   image: string;
 }
 
-const PetManageScreen = () => {
+const PetManageScreenContent = () => {
   const navigation = useNavigation<PetManageScreenNavigationProp>();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -258,5 +258,9 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 });
+
+const PetManageScreen = () => {
+  return <PetManageScreenContent />;
+};
 
 export default PetManageScreen; 
