@@ -7,6 +7,8 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../../types/navigation';
@@ -14,14 +16,15 @@ import KakaoIcon from '../../assets/images/kakao.svg';
 import NaverIcon from '../../assets/images/naver.svg';
 import GoogleIcon from '../../assets/images/google.svg';
 import { colors, spacing, typography, commonStyles } from '../../styles/theme';
-import { login } from '../../utils/api/authApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { login } from '../../utils/api/authApi';
 
 const LoginScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { refreshTokenPeriodically, checkAuthStatus } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -29,20 +32,13 @@ const LoginScreen = () => {
       return;
     }
 
-    try {
-      const success = await login(email, password);
-      console.log('로그인 결과:', success);
-      
-      if (success) {
-        await refreshTokenPeriodically();
-        await checkAuthStatus();
-        console.log('인증 상태 업데이트 완료');
-      } else {
-        Alert.alert('오류', '로그인에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('로그인 처리 중 오류:', error);
-      Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
+    const response = await login(email, password);
+    
+    if (response.success) {
+      await refreshTokenPeriodically();
+      await checkAuthStatus();
+    } else {
+      setErrorMessage(response.message || '로그인에 실패했습니다.');
     }
   };
 
@@ -51,74 +47,86 @@ const LoginScreen = () => {
   };
 
   return (
-    <SafeAreaView style={commonStyles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.title, typography.h1]}>로그인</Text>
-      </View>
-
-      <View style={styles.form}>
-        <TextInput
-          style={commonStyles.input}
-          placeholder="이메일"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={commonStyles.input}
-          placeholder="비밀번호"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <TouchableOpacity style={commonStyles.button} onPress={handleLogin}>
-          <Text style={commonStyles.buttonText}>로그인</Text>
-        </TouchableOpacity>
-
-        <View style={styles.socialLoginContainer}>
-          <View style={styles.dividerContainer}>
-            <View style={commonStyles.divider} />
-            <Text style={styles.socialLoginText}>소셜 계정으로 로그인</Text>
-            <View style={commonStyles.divider} />
-          </View>
-          <View style={styles.socialButtons}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('카카오')}
-            >
-              <KakaoIcon width={48} height={48} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.socialButton, styles.naverButton]}
-              onPress={() => handleSocialLogin('네이버')}
-            >
-              <NaverIcon width={48} height={48} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('구글')}
-            >
-              <GoogleIcon width={48} height={48} />
-            </TouchableOpacity>
-          </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={commonStyles.container}
+    >
+      <View style={styles.contentContainer}>
+        <View style={styles.header}>
+          <Text style={[styles.title, typography.h1]}>로그인</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() => navigation.navigate('UserType')}
-        >
-          <Text style={styles.registerButtonText}>
-            아직 계정이 없으신가요? 회원가입
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.form}>
+          <TextInput
+            style={commonStyles.input}
+            placeholder="이메일"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={commonStyles.input}
+            placeholder="비밀번호"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+          <TouchableOpacity style={commonStyles.button} onPress={handleLogin}>
+            <Text style={commonStyles.buttonText}>로그인</Text>
+          </TouchableOpacity>
+
+          <View style={styles.socialLoginContainer}>
+            <View style={styles.dividerContainer}>
+              <View style={commonStyles.divider} />
+              <Text style={styles.socialLoginText}>소셜 계정으로 로그인</Text>
+              <View style={commonStyles.divider} />
+            </View>
+            <View style={styles.socialButtons}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => handleSocialLogin('카카오')}
+              >
+                <KakaoIcon width={48} height={48} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.socialButton, styles.naverButton]}
+                onPress={() => handleSocialLogin('네이버')}
+              >
+                <NaverIcon width={48} height={48} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => handleSocialLogin('구글')}
+              >
+                <GoogleIcon width={48} height={48} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => navigation.navigate('UserType')}
+          >
+            <Text style={styles.registerButtonText}>
+              아직 계정이 없으신가요? 회원가입
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: spacing.xl * 2,
+  },
   header: {
     padding: spacing.lg,
     alignItems: 'center',
@@ -167,6 +175,12 @@ const styles = StyleSheet.create({
   registerButtonText: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  errorText: {
+    color: '#ff0000',
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'left',
   },
 });
 

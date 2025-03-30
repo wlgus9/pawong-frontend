@@ -5,11 +5,15 @@ import { RootStackParamList } from './types/navigation';
 import AuthNavigator from './navigation/auth/AuthNavigator';
 import TabNavigator from './navigation/TabNavigator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, LogBox } from 'react-native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import PetManageScreen from './screens/mypage/PetManageScreen';
 import UserInfoEditScreen from './screens/mypage/UserInfoEditScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { navigationRef } from './utils/RootNavigation';
+
+// 모든 경고창 비활성화
+LogBox.ignoreAllLogs();
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -51,15 +55,19 @@ const MainNavigator = () => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <GestureHandlerRootView style={styles.container}>
-        <NavigationContainer>
-          <BottomSheetModalProvider>
-            <MainNavigator />
-          </BottomSheetModalProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <NavigationContainer 
+          ref={navigationRef}
+          onStateChange={(state) => {
+            // RESET 액션 경고 무시
+            console.ignoredYellowBox = ['The action \'RESET\''];
+          }}
+        >
+          <MainNavigator />
         </NavigationContainer>
-      </GestureHandlerRootView>
-    </AuthProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 };
 

@@ -31,7 +31,12 @@ interface EmailCheckResponse {
   message: string;
 }
 
-export const login = async (email: string, password: string): Promise<boolean> => {
+interface LoginResult {
+  success: boolean;
+  message?: string;
+}
+
+export const login = async (email: string, password: string): Promise<LoginResult> => {
   try {
     console.log('로그인 시도:', { email });
     
@@ -51,13 +56,20 @@ export const login = async (email: string, password: string): Promise<boolean> =
     if (response?.code === 200 && response.data?.accessToken) {
       const token = response.data.accessToken;
       console.log('저장할 토큰:', token);
-      return await auth.saveTokens(token);
+      const success = await auth.saveTokens(token);
+      return { success, message: response.message };
     }
 
-    return false;
-  } catch (error) {
+    return { 
+      success: false, 
+      message: response?.message || '로그인에 실패했습니다.' 
+    };
+  } catch (error: any) {
     console.error('로그인 에러:', error);
-    return false;
+    return { 
+      success: false, 
+      message: error?.message || '로그인 중 오류가 발생했습니다.' 
+    };
   }
 };
 

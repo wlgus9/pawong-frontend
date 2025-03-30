@@ -1,5 +1,8 @@
 import ApiConfig from '../../config/api';
 import auth from '../auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { navigate } from '../RootNavigation';
+import { STORAGE_KEY } from '../../constants';
 
 export interface ApiResponse<T = any> {
   code: number;
@@ -71,15 +74,21 @@ export const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): 
 
     const data = await response.json();
     console.log(`API 응답 (${endpoint}):`, data);
-
+    
     if (!response.ok) {
       console.error(`API 에러 (${endpoint}):`, data.message || 'API 요청 실패');
-      return undefined;
+      
+      if (response.status === 401 || response.status === 403) {
+        await auth.removeTokens();
+        navigate('Auth', { type: 'reset' });
+      }
+      
+      throw data;
     }
 
     return data;
   } catch (error) {
     console.error(`API 에러 (${endpoint}):`, error instanceof Error ? error.message : '알 수 없는 에러');
-    return undefined;
+    throw error;
   }
 }; 

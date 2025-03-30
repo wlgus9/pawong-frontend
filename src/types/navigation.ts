@@ -7,8 +7,11 @@ export enum UserType {
 
 export type RootStackParamList = {
   Auth: undefined;
+  Login: undefined;
+  Register: undefined;
+  UserType: undefined;
+  Main: undefined;
   TabNavigator: undefined;
-  MyPage: undefined;
   PetManage: undefined;
   UserInfoEdit: undefined;
   Authenticated: undefined;
