@@ -40,9 +40,9 @@ const UserTypeScreen = () => {
 
         <TouchableOpacity
           style={[styles.button, styles.petOwnerButton]}
-          onPress={() => handleUserTypeSelect(UserType.OWNER)}
+          onPress={() => handleUserTypeSelect(UserType.KEEPER)}
         >
-          <Text style={[styles.buttonText, typography.h2]}>반려동물 주인</Text>
+          <Text style={[styles.buttonText, typography.h2]}>키움이</Text>
           <Text style={[styles.buttonDescription, typography.body]}>
             반려동물을 맡기고{'\n'}돌봄 서비스를 받고 싶어요
           </Text>

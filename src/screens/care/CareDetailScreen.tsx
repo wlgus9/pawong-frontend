@@ -18,7 +18,7 @@ type CareDetailRouteProp = RouteProp<CareStackParamList, 'CareDetail'>;
 
 const CareDetailScreen = () => {
   const route = useRoute<CareDetailRouteProp>();
-  const record = dummyCareRecords.find(r => r.id === route.params.recordId);
+  const record = dummyCareRecords.find(r => r.id === route.params.careId);
 
   if (!record) {
     return (

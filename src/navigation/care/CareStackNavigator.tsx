@@ -20,7 +20,7 @@ const CareStackNavigator = () => {
       }}
     >
       <Stack.Screen
-        name="CareList"
+        name="CareHistory"
         component={CareHistoryScreen}
         options={{
           title: '돌봄내역',

@@ -1,11 +1,15 @@
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
 export enum UserType {
   CAREGIVER = 1,
-  OWNER = 2,
+  KEEPER = 2,
 }
 
 export type RootStackParamList = {
   Auth: undefined;
   TabNavigator: undefined;
+  MyPage: undefined;
+  PetManage: undefined;
 };
 
 export type AuthStackParamList = {
@@ -29,9 +33,22 @@ export type CareStackParamList = {
   };
 };
 
+export type MyPageStackParamList = {
+  MyPageMain: undefined;
+};
+
 export type TabParamList = {
   홈: undefined;
   채팅: undefined;
-  CareHistory: undefined;
+  CareStack: undefined;
   마이페이지: undefined;
-}; 
+};
+
+// 네비게이션 타입 통합
+export type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList & 
+  AuthStackParamList & 
+  ChatStackParamList & 
+  CareStackParamList & 
+  MyPageStackParamList
+>; 

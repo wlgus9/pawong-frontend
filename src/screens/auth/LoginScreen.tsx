@@ -9,31 +9,39 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList, RootStackParamList } from '../../types/navigation';
+import { NavigationProp } from '../../types/navigation';
 import KakaoIcon from '../../assets/images/kakao.svg';
 import NaverIcon from '../../assets/images/naver.svg';
 import GoogleIcon from '../../assets/images/google.svg';
 import { colors, spacing, typography, commonStyles } from '../../styles/theme';
-
-type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList & RootStackParamList, 'Login'>;
+import { login } from '../../utils/api/authApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginScreen = () => {
-  const navigation = useNavigation<LoginScreenNavigationProp>();
+  const navigation = useNavigation<NavigationProp>();
+  const { refreshTokenPeriodically, checkAuthStatus } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('오류', '이메일과 비밀번호를 입력해주세요.');
       return;
     }
-    // TODO: 실제 로그인 API 호출
-    // 임시로 바로 TabNavigator로 이동
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'TabNavigator' }],
-    });
+
+    try {
+      const success = await login(email, password);
+      if (success) {
+        // 로그인 성공 시 토큰 갱신 시작
+        refreshTokenPeriodically();
+        // 인증 상태 확인
+        await checkAuthStatus();
+      } else {
+        Alert.alert('오류', '로그인에 실패했습니다.');
+      }
+    } catch (error) {
+      Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
+    }
   };
 
   const handleSocialLogin = (platform: string) => {
@@ -90,7 +98,7 @@ const LoginScreen = () => {
               style={styles.socialButton}
               onPress={() => handleSocialLogin('구글')}
             >
-              <GoogleIcon width={40} height={40} />
+              <GoogleIcon width={48} height={48} />
             </TouchableOpacity>
           </View>
         </View>

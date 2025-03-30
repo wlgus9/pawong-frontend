@@ -18,7 +18,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CareStackParamList } from '../../types/navigation';
 
-type CareNavigationProp = NativeStackNavigationProp<CareStackParamList, 'CareList'>;
+type CareNavigationProp = NativeStackNavigationProp<CareStackParamList, 'CareHistory'>;
 
 const getStatusColor = (status: CareDetails['status']) => {
   switch (status) {
@@ -134,7 +134,7 @@ const CareHistoryScreen = () => {
     return (
       <TouchableOpacity
         style={styles.recordItem}
-        onPress={() => navigation.navigate('CareDetail', { recordId: item.id })}
+        onPress={() => navigation.navigate('CareDetail', { careId: item.id })}
       >
         <View style={styles.recordHeader}>
           <View style={styles.petInfo}>

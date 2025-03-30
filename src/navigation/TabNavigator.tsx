@@ -1,24 +1,22 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { colors, typography } from '../styles/theme';
-
 import CareMapScreen from '../screens/map/CareMapScreen';
 import ChatStackNavigator from './chat/ChatStackNavigator';
 import CareStackNavigator from './care/CareStackNavigator';
-import MyPageScreen from '../screens/mypage/MyPageScreen';
+import MyPageStackNavigator from './mypage/MyPageStackNavigator';
 import { TabParamList } from '../types/navigation';
+import { colors } from '../styles/theme';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const TabNavigator = () => {
+export default function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarLabelStyle: typography.caption,
-        headerShown: false,
       }}
     >
       <Tab.Screen
@@ -26,7 +24,7 @@ const TabNavigator = () => {
         component={CareMapScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <Icon name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -35,31 +33,29 @@ const TabNavigator = () => {
         component={ChatStackNavigator}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-outline" size={size} color={color} />
+            <Icon name="chatbubble-outline" size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
-        name="CareHistory"
+        name="CareStack"
         component={CareStackNavigator}
         options={{
-          tabBarLabel: '돌봄내역',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+            <Icon name="calendar-outline" size={size} color={color} />
           ),
+          tabBarLabel: '돌봄내역',
         }}
       />
       <Tab.Screen
         name="마이페이지"
-        component={MyPageScreen}
+        component={MyPageStackNavigator}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Icon name="person-outline" size={size} color={color} />
           ),
         }}
       />
     </Tab.Navigator>
   );
-};
-
-export default TabNavigator; 
+} 

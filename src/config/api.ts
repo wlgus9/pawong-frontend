@@ -1,27 +1,27 @@
-interface ApiConfig {
-  baseURL: string;
-  endpoints: {
-    login: string;
-    signup: string;
-  };
-}
+const BASE_URL = 'http://localhost:8080';
 
-const development: ApiConfig = {
-  baseURL: 'http://localhost:8080',
-  endpoints: {
+export const ApiEndpoints = {
+  auth: {
     login: '/api/users/login',
     signup: '/api/users/signup',
+    reissue: '/api/users/reissue',
   },
-};
-
-const production: ApiConfig = {
-  baseURL: 'https://api.pawong.com', // 실제 운영 서버 주소로 변경 필요
-  endpoints: {
-    login: '/api/users/login',
-    signup: '/api/users/signup',
+  mypage: {
+    userInfo: '/api/my-page/search/user-info',
+    updateNickname: '/api/my-page/update/nickname',
+    deleteAccount: '/api/my-page/delete',
   },
-};
+  pet: {
+    list: '/api/pets',
+    create: '/api/pets',
+    update: '/api/pets/:id',
+    delete: '/api/pets/:id',
+  },
+} as const;
 
-const config = __DEV__ ? development : production;
+export const ApiConfig = {
+  baseURL: BASE_URL,
+  endpoints: ApiEndpoints,
+} as const;
 
-export default config; 
+export default ApiConfig; 

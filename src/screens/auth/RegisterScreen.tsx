@@ -15,7 +15,7 @@ import KakaoIcon from '../../assets/images/kakao.svg';
 import NaverIcon from '../../assets/images/naver.svg';
 import GoogleIcon from '../../assets/images/google.svg';
 import { colors, spacing, typography, commonStyles } from '../../styles/theme';
-import { signup } from '../../utils/api';
+import { signup } from '../../utils/api/authApi';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { AuthStackParamList, UserType } from '../../types/navigation';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -110,7 +110,7 @@ const RegisterScreen = () => {
       userType,
     });
 
-    if (response.success) {
+    if (response) {
       Alert.alert('성공', '회원가입이 완료되었습니다.', [
         {
           text: '확인',
@@ -118,7 +118,7 @@ const RegisterScreen = () => {
         },
       ]);
     } else {
-      Alert.alert('오류', response.error || '회원가입 중 오류가 발생했습니다.');
+      Alert.alert('오류', '회원가입 중 오류가 발생했습니다.');
     }
   };
 
